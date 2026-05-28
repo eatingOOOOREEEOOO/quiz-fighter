@@ -606,40 +606,60 @@ function chooseDiff(diff){
 async function generateQuestion(diff,action,cb){
   const diffMap={easy:'mudah (SD/SMP)',medium:'sedang (SMA/umum)',hard:'sulit (trivia, sains, sejarah, geografi mendalam)'};
   const actCtx={attack:'serangan biasa',heavy:'serangan berat',defend:'bertahan/shield',heal:'pemulihan HP',special:'skill khusus'};
-  const prompt=`Buat 1 pertanyaan pengetahuan umum Bahasa Indonesia, tingkat ${diffMap[diff]}, untuk aksi "${actCtx[action]||action}" dalam game fighting.
-Jawaban singkat 1-4 kata. Balas HANYA JSON valid ini tanpa markdown atau teks lain:
-{"q":"pertanyaan?","answer":"jawaban","choices":["A","B","C","D"]}
-Pastikan jawaban ada di choices dan choices diacak.`;
+  const prompt='Buat 1 pertanyaan pengetahuan umum Bahasa Indonesia, tingkat '+diffMap[diff]+', untuk aksi "'+( actCtx[action]||action)+'" dalam game fighting. Jawaban singkat 1-4 kata. Balas HANYA JSON valid ini tanpa markdown atau teks lain: {"q":"pertanyaan?","answer":"jawaban","choices":["A","B","C","D"]} Pastikan jawaban ada di choices dan choices diacak.';
+
+  // Timeout 6 detik — kalau Gemini lambat langsung pakai fallback
+  var timedOut = false;
+  var timer = setTimeout(function(){
+    timedOut = true;
+    var fb=getFallback(diff); fb.diff=diff; fb.action=action;
+    cb(fb);
+    toast('⚠️ AI lambat, pakai soal cadangan');
+  }, 6000);
 
   try{
-    const resp=await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
-      {method:'POST',headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({contents:[{parts:[{text:prompt}]}],
-         generationConfig:{temperature:.8,maxOutputTokens:200}})}
+    const resp = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+GEMINI_KEY,
+      {method:'POST',
+       headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({
+         contents:[{parts:[{text:prompt}]}],
+         generationConfig:{temperature:0.8,maxOutputTokens:200}
+       })
+      }
     );
-    const data=await resp.json();
-    const raw=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
-    const clean=raw.replace(/```json|```/g,'').trim();
-    const q=JSON.parse(clean);
-    q.diff=diff;q.action=action;
+    if(timedOut) return; // sudah pakai fallback
+    clearTimeout(timer);
+    const data = await resp.json();
+    const raw = (data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]&&data.candidates[0].content.parts[0].text)||'';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const q = JSON.parse(clean);
+    q.diff=diff; q.action=action;
     cb(q);
   }catch(e){
-    const fb=getFallback(diff);
-    fb.diff=diff;fb.action=action;
+    if(timedOut) return;
+    clearTimeout(timer);
+    var fb=getFallback(diff); fb.diff=diff; fb.action=action;
     cb(fb);
-    toast('⚠️ AI timeout, pakai soal cadangan');
+    toast('⚠️ Gemini error, pakai soal cadangan');
   }
 }
 
+// Bank soal lokal — dipakai kalau Gemini tidak respond
+var _usedQ = {easy:[], medium:[], hard:[]};
 function getFallback(diff){
-  const pool={
+  var pool={
     easy:[
       {q:'Apa ibu kota Indonesia?',answer:'jakarta',choices:['Jakarta','Bandung','Surabaya','Medan']},
       {q:'Berapa hasil 8 × 7?',answer:'56',choices:['48','56','54','62']},
       {q:'Planet terbesar di tata surya?',answer:'jupiter',choices:['Saturnus','Jupiter','Uranus','Mars']},
       {q:'Warna bendera Indonesia?',answer:'merah putih',choices:['Merah Putih','Merah Biru','Kuning Hijau','Biru Putih']},
       {q:'Berapa sisi segitiga?',answer:'3',choices:['2','3','4','5']},
+      {q:'Hewan apa yang disebut Raja Hutan?',answer:'singa',choices:['Harimau','Singa','Gajah','Serigala']},
+      {q:'Apa nama ibukota Jepang?',answer:'tokyo',choices:['Seoul','Beijing','Tokyo','Bangkok']},
+      {q:'Berapa jumlah planet di tata surya?',answer:'8',choices:['7','8','9','10']},
+      {q:'Apa warna pelangi paling atas?',answer:'merah',choices:['Merah','Ungu','Kuning','Biru']},
+      {q:'Siapa presiden pertama Indonesia?',answer:'soekarno',choices:['Soeharto','Soekarno','Habibie','Wahid']},
     ],
     medium:[
       {q:'Siapa penemu bola lampu?',answer:'thomas edison',choices:['Nikola Tesla','Thomas Edison','Einstein','Newton']},
@@ -647,6 +667,11 @@ function getFallback(diff){
       {q:'Tahun berapa Indonesia merdeka?',answer:'1945',choices:['1942','1945','1949','1950']},
       {q:'Organ tubuh yang memompa darah?',answer:'jantung',choices:['Paru-paru','Hati','Jantung','Ginjal']},
       {q:'Proses tumbuhan membuat makanan sendiri?',answer:'fotosintesis',choices:['Respirasi','Fotosintesis','Osmosis','Fermentasi']},
+      {q:'Negara dengan populasi terbanyak di dunia?',answer:'india',choices:['China','India','Amerika','Indonesia']},
+      {q:'Siapa yang melukis Monalisa?',answer:'leonardo da vinci',choices:['Michelangelo','Da Vinci','Picasso','Raphael']},
+      {q:'Berapa tulang dalam tubuh manusia dewasa?',answer:'206',choices:['186','206','226','246']},
+      {q:'Apa nama samudra terluas di dunia?',answer:'pasifik',choices:['Atlantik','Hindia','Pasifik','Arktik']},
+      {q:'Siapa penemu telepon?',answer:'alexander graham bell',choices:['Thomas Edison','Graham Bell','Nikola Tesla','Marconi']},
     ],
     hard:[
       {q:'Simbol kimia untuk Emas?',answer:'au',choices:['Ag','Au','Fe','Cu']},
@@ -654,10 +679,23 @@ function getFallback(diff){
       {q:'Teori Relativitas dikemukakan oleh?',answer:'albert einstein',choices:['Newton','Tesla','Einstein','Bohr']},
       {q:'DNA singkatan dari?',answer:'deoxyribonucleic acid',choices:['Deoxyribonucleic Acid','Diribonucleic Acid','Deoxyribonitric Acid','Diaminonucleic Acid']},
       {q:'Kecepatan cahaya dalam vakum (km/s)?',answer:'299792',choices:['199792','299792','399792','499792']},
+      {q:'Siapa penulis Hamlet?',answer:'william shakespeare',choices:['Charles Dickens','Shakespeare','Jane Austen','Homer']},
+      {q:'Apa nama partikel subatom bermuatan positif?',answer:'proton',choices:['Elektron','Neutron','Proton','Foton']},
+      {q:'Gunung tertinggi di dunia?',answer:'everest',choices:['K2','Kilimanjaro','Everest','Elbrus']},
+      {q:'Tahun berapa Perang Dunia II berakhir?',answer:'1945',choices:['1943','1944','1945','1946']},
+      {q:'Apa nama hukum gravitasi universal yang dirumuskan Newton?',answer:'gravitasi universal',choices:['Gravitasi Universal','Relativitas','Termodinamika','Archimedes']},
     ]
   };
-  const arr=pool[diff]||pool.easy;
-  return {...arr[Math.floor(Math.random()*arr.length)]};
+  // Hindari soal yang sama berulang
+  var arr = pool[diff]||pool.easy;
+  var used = _usedQ[diff]||[];
+  var available = arr.filter(function(q,i){ return used.indexOf(i)===-1; });
+  if(available.length===0){ _usedQ[diff]=[]; available=arr; }
+  var picked = available[Math.floor(Math.random()*available.length)];
+  var idx = arr.indexOf(picked);
+  if(!_usedQ[diff]) _usedQ[diff]=[];
+  _usedQ[diff].push(idx);
+  return Object.assign({},picked);
 }
 
 // ══════════════════════════════════════
