@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quiz Fighter ⚔️</title>
-<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -210,6 +210,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       <input class="inp" id="inp-name" placeholder="Masukkan username..." maxlength="16">
     </div>
     <button class="btn btn-p1" onclick="doCreateRoom(this)">➕ BUAT ROOM BARU</button>
+    <div id="conn-err" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:.6rem 1rem;font-size:.82rem;font-weight:700;color:#fca5a5;text-align:center"></div>
     <div class="or-div">atau masukkan kode teman</div>
     <input class="inp code-inp" id="inp-code" placeholder="····" maxlength="4"
       oninput="this.value=this.value.toUpperCase()"
@@ -333,8 +334,11 @@ function getNameOrWarn(){
 
 function doCreateRoom(btn){
   if(!getNameOrWarn()) return;
+  var errEl=document.getElementById('conn-err');
+  if(errEl) errEl.style.display='none';
   btn.disabled=true; btn.innerHTML='⏳ Menghubungkan...';
   connectAbly(function(){
+    btn.disabled=false; btn.innerHTML='➕ BUAT ROOM BARU';
     roomCode=genCode(); isHost=true; myIndex=0;
     subRoom(function(){
       $('disp-code').textContent=roomCode;
@@ -368,37 +372,40 @@ function doJoinRoom(btn){
 }
 
 function connectAbly(onSuccess, onFail){
-  // Sudah connected, langsung lanjut
-  if(ablyClient && ablyClient.connection.state==='connected'){
-    onSuccess(); return;
-  }
-  // Bersihkan koneksi lama
+  if(ablyClient && ablyClient.connection.state==='connected'){ onSuccess(); return; }
   if(ablyClient){ try{ ablyClient.close(); }catch(e){} ablyClient=null; }
 
-  myId=localStorage.getItem('qf_myid')||Math.random().toString(36).slice(2,10);
-  localStorage.setItem('qf_myid',myId);
+  myId = localStorage.getItem('qf_myid') || Math.random().toString(36).slice(2,10);
+  localStorage.setItem('qf_myid', myId);
 
-  var done=false;
-  function succeed(){ if(done) return; done=true; clearTimeout(timer); onSuccess(); }
-  function fail(reason){ if(done) return; done=true; clearTimeout(timer);
-    toast('❌ '+(reason||'Gagal koneksi!')); if(onFail) onFail(); }
+  var called = false;
+  function done(ok, msg){
+    if(called) return; called=true;
+    clearTimeout(tOut);
+    if(ok){ onSuccess(); }
+    else { showErr(msg); if(onFail) onFail(); }
+  }
 
-  // Timeout 8 detik
-  var timer=setTimeout(function(){ fail('Koneksi timeout. Cek internet / API key Ably.'); },8000);
+  var tOut = setTimeout(function(){
+    done(false,'⏱️ Timeout! Cek koneksi internet kamu.');
+  }, 10000);
 
   try{
-    ablyClient=new Ably.Realtime({
-      key: ABLY_KEY,
-      clientId: myId,
-      disconnectedRetryTimeout: 2000,
-      suspendedRetryTimeout: 2000
-    });
-    ablyClient.connection.on(function(stateChange){
-      var s=stateChange.current;
-      if(s==='connected') succeed();
-      else if(s==='failed'||s==='closed') fail('Koneksi Ably gagal ('+s+'). Cek API key.');
-    });
-  }catch(e){ fail('Error: '+e.message); }
+    ablyClient = new Ably.Realtime({ key: ABLY_KEY, clientId: myId });
+    ablyClient.connection.on('connected',    function(){ done(true); });
+    ablyClient.connection.on('failed',       function(){ done(false,'❌ Ably gagal. Cek API key.'); });
+    ablyClient.connection.on('disconnected', function(){ /* retry otomatis */ });
+    ablyClient.connection.on('suspended',    function(){ done(false,'⚠️ Koneksi tersuspend.'); });
+  } catch(e){
+    done(false,'❌ Error: '+e.message);
+  }
+}
+
+function showErr(msg){
+  toast(msg, 5000);
+  // Tampilkan juga di bawah tombol supaya keliatan
+  var el = document.getElementById('conn-err');
+  if(el){ el.textContent = msg; el.style.display='block'; }
 }
 
 function genCode(){
