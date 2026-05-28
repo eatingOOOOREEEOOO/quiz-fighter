@@ -281,7 +281,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 // ══════════════════════════════════════
 // API KEYS (ditanam)
 // ══════════════════════════════════════
-const ABLY_KEY   = 'NZMaLg.vHk4fw:FOBMrAp7bdoNYAGJKAKxnmuvPF4OdBPwlXB-191Eixo';
+const ABLY_KEY   = 'CZXCFA.VsGoag:Ah105mQzsmVK02WIN-K4qkbEK_qJN_R4kNX9DbM0t6A';
 const GEMINI_KEY = 'AIzaSyD4oJmgGdgQOFAN5KVWGW5gmIQBtzofnDs';
 const MAX_HP     = 200;
 
@@ -368,15 +368,37 @@ function doJoinRoom(btn){
 }
 
 function connectAbly(onSuccess, onFail){
-  if(ablyClient && ablyClient.connection.state==='connected'){ onSuccess(); return; }
+  // Sudah connected, langsung lanjut
+  if(ablyClient && ablyClient.connection.state==='connected'){
+    onSuccess(); return;
+  }
+  // Bersihkan koneksi lama
   if(ablyClient){ try{ ablyClient.close(); }catch(e){} ablyClient=null; }
+
   myId=localStorage.getItem('qf_myid')||Math.random().toString(36).slice(2,10);
   localStorage.setItem('qf_myid',myId);
+
+  var done=false;
+  function succeed(){ if(done) return; done=true; clearTimeout(timer); onSuccess(); }
+  function fail(reason){ if(done) return; done=true; clearTimeout(timer);
+    toast('❌ '+(reason||'Gagal koneksi!')); if(onFail) onFail(); }
+
+  // Timeout 8 detik
+  var timer=setTimeout(function(){ fail('Koneksi timeout. Cek internet / API key Ably.'); },8000);
+
   try{
-    ablyClient=new Ably.Realtime({key:ABLY_KEY, clientId:myId});
-    ablyClient.connection.once('connected', function(){ onSuccess(); });
-    ablyClient.connection.once('failed', function(){ toast('❌ Gagal koneksi! Cek internet.'); if(onFail) onFail(); });
-  }catch(e){ toast('❌ Error: '+e.message); if(onFail) onFail(); }
+    ablyClient=new Ably.Realtime({
+      key: ABLY_KEY,
+      clientId: myId,
+      disconnectedRetryTimeout: 2000,
+      suspendedRetryTimeout: 2000
+    });
+    ablyClient.connection.on(function(stateChange){
+      var s=stateChange.current;
+      if(s==='connected') succeed();
+      else if(s==='failed'||s==='closed') fail('Koneksi Ably gagal ('+s+'). Cek API key.');
+    });
+  }catch(e){ fail('Error: '+e.message); }
 }
 
 function genCode(){
@@ -386,11 +408,12 @@ function genCode(){
 }
 
 function subRoom(onReady){
-  const ch='quiz-fighter:'+roomCode;
+  var ch='quiz-fighter:'+roomCode;
   gameChannel=ablyClient.channels.get(ch);
-  gameChannel.subscribe(handleMsg);
-  gameChannel.attach(err=>{
-    if(err){toast('❌ Gagal masuk channel!');return;}
+  // Subscribe dulu baru attach
+  gameChannel.subscribe(function(msg){ handleMsg(msg); });
+  gameChannel.attach(function(err){
+    if(err){ toast('❌ Gagal masuk channel: '+err.message); return; }
     onReady();
   });
 }
