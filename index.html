@@ -209,12 +209,12 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       <div class="lbl">Username</div>
       <input class="inp" id="inp-name" placeholder="Masukkan username..." maxlength="16">
     </div>
-    <button class="btn btn-p1" onclick="doCreateRoom()">➕ BUAT ROOM BARU</button>
+    <button class="btn btn-p1" onclick="doCreateRoom(this)">➕ BUAT ROOM BARU</button>
     <div class="or-div">atau masukkan kode teman</div>
     <input class="inp code-inp" id="inp-code" placeholder="····" maxlength="4"
       oninput="this.value=this.value.toUpperCase()"
-      onkeydown="if(event.key==='Enter') doJoinRoom()">
-    <button class="btn btn-p2" onclick="doJoinRoom()">🚪 JOIN ROOM</button>
+      onkeydown="if(event.key==='Enter') doJoinRoom(document.querySelector('.btn-p2'))">
+    <button class="btn btn-p2" onclick="doJoinRoom(this)">🚪 JOIN ROOM</button>
   </div>
 
   <!-- step-room tidak dipakai lagi, tetap ada agar showStep('room') tidak error -->
@@ -331,55 +331,58 @@ function getNameOrWarn(){
   return name;
 }
 
-function doCreateRoom(){
+function doCreateRoom(btn){
   if(!getNameOrWarn()) return;
-  const btn=event.currentTarget;
-  btn.disabled=true; btn.textContent='Menghubungkan...';
-  connectAbly(()=>{
-    btn.disabled=false; btn.textContent='➕ BUAT ROOM BARU';
+  btn.disabled=true; btn.innerHTML='⏳ Menghubungkan...';
+  connectAbly(function(){
     roomCode=genCode(); isHost=true; myIndex=0;
-    subRoom(()=>{
+    subRoom(function(){
       $('disp-code').textContent=roomCode;
       showStep('wait');
       toast('✅ Room '+roomCode+' siap! Tunggu temanmu.');
     });
+  }, function(){
+    btn.disabled=false; btn.innerHTML='➕ BUAT ROOM BARU';
   });
 }
 
-function doJoinRoom(){
+function doJoinRoom(btn){
   if(!getNameOrWarn()) return;
-  const code=$('inp-code').value.trim().toUpperCase();
+  var code=$('inp-code').value.trim().toUpperCase();
   if(code.length<4){toast('Kode harus 4 huruf!');return;}
-  const btn=document.querySelector('.btn-p2');
-  btn.disabled=true; btn.textContent='Menghubungkan...';
-  connectAbly(()=>{
-    btn.disabled=false; btn.textContent='🚪 JOIN ROOM';
+  btn.disabled=true; btn.innerHTML='⏳ Menghubungkan...';
+  connectAbly(function(){
+    btn.disabled=false; btn.innerHTML='🚪 JOIN ROOM';
     roomCode=code; isHost=false; myIndex=1;
-    subRoom(()=>{
+    subRoom(function(){
       publishMsg('player_join',{
         id:myId,
-        name:localStorage.getItem('qf_name'),
-        av:selectedAv,
-        index:1
+        name:localStorage.getItem('qf_name')||$('inp-name').value.trim(),
+        av:selectedAv, index:1
       });
+      toast('✅ Bergabung ke room '+code+'...');
     });
+  }, function(){
+    btn.disabled=false; btn.innerHTML='🚪 JOIN ROOM';
   });
 }
 
-function connectAbly(cb){
-  if(ablyClient&&ablyClient.connection.state==='connected'){cb();return;}
+function connectAbly(onSuccess, onFail){
+  if(ablyClient && ablyClient.connection.state==='connected'){ onSuccess(); return; }
+  if(ablyClient){ try{ ablyClient.close(); }catch(e){} ablyClient=null; }
   myId=localStorage.getItem('qf_myid')||Math.random().toString(36).slice(2,10);
   localStorage.setItem('qf_myid',myId);
   try{
-    ablyClient=new Ably.Realtime({key:ABLY_KEY,clientId:myId});
-    ablyClient.connection.on('connected',cb);
-    ablyClient.connection.on('failed',()=>toast('❌ Gagal koneksi! Cek internet.'));
-  }catch(e){toast('❌ Error: '+e.message);}
+    ablyClient=new Ably.Realtime({key:ABLY_KEY, clientId:myId});
+    ablyClient.connection.once('connected', function(){ onSuccess(); });
+    ablyClient.connection.once('failed', function(){ toast('❌ Gagal koneksi! Cek internet.'); if(onFail) onFail(); });
+  }catch(e){ toast('❌ Error: '+e.message); if(onFail) onFail(); }
 }
 
 function genCode(){
-  const c='ABCDEFGHJKLMNPQRSTUVWXYZ';
-  return Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join('');
+  var c='ABCDEFGHJKLMNPQRSTUVWXYZ', code='';
+  for(var i=0;i<4;i++) code+=c[Math.floor(Math.random()*c.length)];
+  return code;
 }
 
 function subRoom(onReady){
