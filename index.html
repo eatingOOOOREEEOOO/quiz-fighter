@@ -489,7 +489,40 @@ body::before {
   font-size:.78rem; font-weight:400; min-height:1rem;
 }
 
-/* Toast */
+/* Timer */
+.q-timer {
+  display:flex; align-items:center; gap:.6rem;
+  margin-bottom:.6rem;
+}
+.q-timer-bar-wrap {
+  flex:1; height:6px; background:rgba(255,255,255,.08);
+  border-radius:3px; overflow:hidden;
+}
+.q-timer-bar {
+  height:100%; border-radius:3px;
+  background:linear-gradient(90deg,var(--green),var(--goldl));
+  transition:width .9s linear, background-color .5s;
+}
+.q-timer-bar.warn { background:linear-gradient(90deg,var(--red),#ff8c42); }
+.q-timer-num {
+  font-family:'DM Serif Display', serif;
+  font-size:1.1rem; font-weight:700;
+  color:var(--goldl); min-width:28px; text-align:right;
+}
+.q-timer-num.warn { color:var(--red); animation:hblink .5s infinite; }
+
+/* Diff badge fix */
+.diff-badge {
+  display:inline-block; padding:2px 9px; border-radius:20px;
+  font-size:.66rem; font-weight:600; letter-spacing:.06em;
+  text-transform:uppercase; margin-bottom:.6rem;
+}
+.diff-badge.easy   { background:rgba(76,175,130,.15);  color:var(--easy); }
+.diff-badge.medium { background:rgba(212,168,75,.15);  color:var(--med); }
+.diff-badge.hard   { background:rgba(224,85,85,.15);   color:var(--hard); }
+.q-txt { font-size:1rem; font-weight:400; line-height:1.55; color:var(--text); }
+
+
 #toast {
   position:fixed; top:1rem; left:50%; transform:translateX(-50%);
   background:var(--ink3); border:1px solid var(--border2);
@@ -630,11 +663,9 @@ const ABLY_KEY   = 'CZXCFA.VsGoag:Ah105mQzsmVK02WIN-K4qkbEK_qJN_R4kNX9DbM0t6A';
 const MAX_HP     = 200;
 
 const ACTIONS = {
-  attack:  {icon:'⚔️', name:'Serang',        hint:'Pukul lawan!',         cls:'dmg', val:{easy:15,medium:30,hard:50},  type:'dmg'},
-  heavy:   {icon:'💥', name:'Serangan Berat', hint:'Damage besar!',        cls:'dmg', val:{easy:25,medium:50,hard:80},  type:'dmg'},
-  defend:  {icon:'🛡️',name:'Bertahan',       hint:'Pasang perisai!',      cls:'def', val:{easy:20,medium:35,hard:55},  type:'shield'},
-  heal:    {icon:'💚', name:'Pulihkan HP',    hint:'Sembuhkan dirimu!',    cls:'hel', val:{easy:15,medium:28,hard:45},  type:'heal'},
-  special: {icon:'✨', name:'Skill Khusus',   hint:'Hancurkan segalanya!', cls:'spl', val:{easy:30,medium:60,hard:100}, type:'special'},
+  attack:  {icon:'⚔️', name:'Serang',     hint:'Pukul lawan!',      cls:'dmg', val:{easy:15,medium:30,hard:50}, type:'dmg'},
+  defend:  {icon:'🛡️',name:'Bertahan',   hint:'Kurangi 50% damage!',cls:'def', val:{easy:20,medium:35,hard:55}, type:'shield'},
+  heal:    {icon:'💚', name:'Pulihkan HP', hint:'Sembuhkan dirimu!', cls:'hel', val:{easy:15,medium:28,hard:45}, type:'heal'},
 };
 
 // ══════════════════════════════════════
@@ -859,6 +890,7 @@ function handleMsg(msg){
 
     // ── HASIL AKSI ──
     case 'action_result':
+      clearQuestionTimer();
       // Kedua player render hasil (host broadcast, kedua terima)
       gs=d.gs; renderFighters(); showResult(d);
       if(d.gameOver){
@@ -1076,13 +1108,61 @@ function getFallback(diff){
 }
 
 // ══════════════════════════════════════
+// QUESTION TIMER
+// ══════════════════════════════════════
+var _qTimer=null, _qTimerSec=0, _qTimerMax=0;
+
+function startQuestionTimer(seconds, onExpire){
+  clearQuestionTimer();
+  _qTimerMax=seconds; _qTimerSec=seconds;
+  updateTimerUI(seconds,seconds);
+  _qTimer=setInterval(function(){
+    _qTimerSec--;
+    updateTimerUI(_qTimerSec,_qTimerMax);
+    if(_qTimerSec<=0){
+      clearQuestionTimer();
+      onExpire();
+    }
+  },1000);
+}
+
+function clearQuestionTimer(){
+  if(_qTimer){clearInterval(_qTimer);_qTimer=null;}
+  var bar=document.getElementById('q-timer-bar');
+  var num=document.getElementById('q-timer-num');
+  if(bar) bar.closest('.q-timer') && (bar.closest('.q-timer').style.display='none');
+}
+
+function updateTimerUI(sec, max){
+  var bar=document.getElementById('q-timer-bar');
+  var num=document.getElementById('q-timer-num');
+  if(!bar||!num) return;
+  var pct=Math.max(0,(sec/max)*100);
+  bar.style.width=pct+'%';
+  num.textContent=sec;
+  var warn=sec<=5;
+  bar.className='q-timer-bar'+(warn?' warn':'');
+  num.className='q-timer-num'+(warn?' warn':'');
+}
+
+// Timer duration based on difficulty
+function timerDuration(diff){
+  return diff==='hard'?20:diff==='medium'?25:30;
+}
+
+// ══════════════════════════════════════
 // SHOW QUESTION
 // ══════════════════════════════════════
 function showQuestion(q,canAnswer){
   const letters=['A','B','C','D'];
   const dname={easy:'Mudah',medium:'Sedang',hard:'Sulit'};
+  const dur=timerDuration(q.diff);
   $('g-ptitle').textContent=ACTIONS[q.action]?.icon+' Jawab Pertanyaan!';
   $('g-pcontent').innerHTML=`
+    <div class="q-timer" id="q-timer-wrap">
+      <div class="q-timer-bar-wrap"><div class="q-timer-bar" id="q-timer-bar" style="width:100%"></div></div>
+      <div class="q-timer-num" id="q-timer-num">${dur}</div>
+    </div>
     <div class="q-box">
       <span class="diff-badge ${q.diff}">${dname[q.diff]||q.diff}</span>
       <div class="q-txt">${q.q}</div>
@@ -1098,9 +1178,24 @@ function showQuestion(q,canAnswer){
         </div>`
       :`<div class="wait-box"><span class="big">✏️</span>Menunggu lawan menjawab...</div>`
     }`;
+
+  if(canAnswer){
+    startQuestionTimer(dur, function(){
+      // Time's up — disable choices and auto-skip as wrong answer
+      document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
+      toast('⏰ Waktu habis! Giliran dilewati.');
+      // Publish timeout as wrong answer
+      publishMsg('answer_submit',{answer:'__timeout__', playerIndex:myIndex});
+      if(isHost) processAnswer('__timeout__', myIndex);
+    });
+  } else {
+    // Show timer for observer too (cosmetic only)
+    startQuestionTimer(dur, function(){});
+  }
 }
 
 function submitAnswer(btn,answer){
+  clearQuestionTimer();
   document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
   btn.style.borderColor='var(--gold)';
   var ans = answer.toLowerCase().trim();
@@ -1109,12 +1204,36 @@ function submitAnswer(btn,answer){
   if(isHost) processAnswer(ans, myIndex);
 }
 
+function normalizeAnswer(s){
+  return (s||'').toLowerCase().trim().replace(/\s+/g,' ');
+}
+
+// Check if a chosen option matches the stored answer
+// Handles cases like choice="Einstein" answer="albert einstein"
+function isCorrectChoice(chosenText, q){
+  const cn = normalizeAnswer(chosenText);
+  const an = normalizeAnswer(q.answer);
+  if(cn === an) return true;
+  // Check if the chosen text is contained in the answer or vice versa
+  if(an.includes(cn) || cn.includes(an)) return true;
+  // Check if the chosen text's last word matches (e.g. "Shakespeare" in "william shakespeare")
+  const chosenWords = cn.split(' ');
+  const answerWords = an.split(' ');
+  if(chosenWords.some(w => w.length>3 && answerWords.includes(w))) return true;
+  return false;
+}
+
 // ══════════════════════════════════════
 // PROCESS ANSWER (host only)
 // ══════════════════════════════════════
 function processAnswer(answer,playerIndex){
+  clearQuestionTimer();
   const q=currentQuestion;
-  const correct=answer===q.answer.toLowerCase().trim();
+  // Normalize both sides for comparison
+  const correct = answer!=='__timeout__' && (
+    normalizeAnswer(answer)===normalizeAnswer(q.answer) ||
+    isCorrectChoice(answer, q)
+  );
   const act=ACTIONS[q.action];
   const val=act.val[q.diff]||0;
   const atk=gs.players[playerIndex];
@@ -1125,10 +1244,12 @@ function processAnswer(answer,playerIndex){
     if(act.type==='dmg'){
       let dmg=val;
       if(def.shield>0){
-        const abs=Math.min(def.shield,dmg);
-        def.shield=Math.max(0,def.shield-dmg);
-        dmg=Math.max(0,dmg-abs);
-        if(abs>0) msg=` (Shield serap ${abs}!)`;
+        // Shield serap 50% damage
+        const absorbed=Math.floor(dmg*0.5);
+        const shieldCost=Math.min(def.shield,absorbed);
+        def.shield=Math.max(0,def.shield-shieldCost);
+        dmg=dmg-absorbed;
+        msg=` (Shield serap ${absorbed}!)`;
       }
       def.hp=Math.max(0,def.hp-dmg);
       effectType='damage';effectVal=dmg;
@@ -1136,16 +1257,12 @@ function processAnswer(answer,playerIndex){
     } else if(act.type==='shield'){
       atk.shield=Math.min(120,atk.shield+val);
       effectType='shield';effectVal=val;
-      msg=`${atk.name} memasang shield +${val}!`;
+      msg=`${atk.name} memasang shield +${val}! (Kurangi 50% damage serangan berikutnya)`;
     } else if(act.type==='heal'){
       const h=Math.min(val,atk.maxHp-atk.hp);
       atk.hp=Math.min(atk.maxHp,atk.hp+val);
       effectType='heal';effectVal=h;
       msg=`${atk.name} memulihkan +${h} HP!`;
-    } else if(act.type==='special'){
-      def.shield=0;def.hp=Math.max(0,def.hp-val);
-      effectType='special';effectVal=val;
-      msg=`✨ SKILL KHUSUS! Shield hancur + ${val} damage!`;
     }
   } else {
     msg=`${atk.name} menjawab salah! Aksi gagal!`;
@@ -1155,8 +1272,12 @@ function processAnswer(answer,playerIndex){
   if(!gameOver){gs.turn=1-gs.turn;if(gs.turn===0)gs.round++;gs.phase='result';}
   else gs.phase='game_over';
 
+  const isTimeout = answer==='__timeout__';
+  if(isTimeout && !correct) msg=`${atk.name} kehabisan waktu! Aksi gagal!`;
+
   publishMsg('action_result',{
     correct,effectType,effectVal,msg,
+    timeout:isTimeout,
     attackerIdx:playerIndex,defenderIdx:1-playerIndex,
     correctAnswer:correct?null:q.answer,
     gs,gameOver,
@@ -1168,11 +1289,12 @@ function processAnswer(answer,playerIndex){
 // SHOW RESULT
 // ══════════════════════════════════════
 function showResult(d){
-  const ec={damage:'var(--red)',shield:'var(--p2l)',heal:'var(--green)',special:'var(--gold)',miss:'var(--muted)'};
-  const ei={damage:'💥',shield:'🛡️',heal:'💚',special:'✨',miss:'💨'};
+  clearQuestionTimer();
+  const ec={damage:'var(--red)',shield:'var(--p2l)',heal:'var(--green)',miss:'var(--muted)'};
+  const ei={damage:'💥',shield:'🛡️',heal:'💚',miss:'💨'};
   let extra='';
   if(d.correct){
-    const lbl=d.effectType==='damage'||d.effectType==='special'?`-${d.effectVal} HP`
+    const lbl=d.effectType==='damage'?`-${d.effectVal} HP`
               :d.effectType==='shield'?`+${d.effectVal} Shield`
               :d.effectType==='heal'?`+${d.effectVal} HP`:'';
     extra=`<div class="r-eff" style="color:${ec[d.effectType]||'white'}">${ei[d.effectType]||''} ${lbl}</div>`;
@@ -1180,13 +1302,13 @@ function showResult(d){
     extra=`<div style="margin-top:.4rem;color:var(--muted);font-size:.85rem;font-weight:700">
       Jawaban: <span style="color:var(--green)">${d.correctAnswer||''}</span></div>`;
   }
-  $('g-ptitle').textContent=d.correct?'🎉 Benar!':'😢 Salah!';
+  $('g-ptitle').textContent=d.correct?'🎉 Benar!':d.timeout?'⏰ Waktu Habis!':'😢 Salah!';
   $('g-pcontent').innerHTML=`<div class="result-box ${d.correct?'ok':'fail'}">
-    <span class="r-icon">${d.correct?'✅':'❌'}</span>
+    <span class="r-icon">${d.correct?'✅':d.timeout?'⏰':'❌'}</span>
     <div class="r-msg">${d.msg}</div>${extra}
   </div>`;
 
-  if(d.effectType==='damage'||d.effectType==='special'){
+  if(d.effectType==='damage'){
     spawnFloat('-'+d.effectVal,'fc'+d.defenderIdx,ec.damage);
     $('fc'+d.defenderIdx).classList.add('shake');
     setTimeout(()=>$('fc'+d.defenderIdx).classList.remove('shake'),500);
@@ -1195,10 +1317,6 @@ function showResult(d){
     spawnFloat('+'+d.effectVal+' HP','fc'+d.attackerIdx,ec.heal);
     $('fc'+d.attackerIdx).classList.add('heal-pulse');
     setTimeout(()=>$('fc'+d.attackerIdx).classList.remove('heal-pulse'),1100);
-  }
-  if(d.effectType==='special'){
-    $('fc'+d.attackerIdx).classList.add('special-pulse');
-    setTimeout(()=>$('fc'+d.attackerIdx).classList.remove('special-pulse'),1600);
   }
 }
 
