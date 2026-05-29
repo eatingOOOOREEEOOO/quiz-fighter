@@ -492,16 +492,16 @@ body::before {
 /* Timer */
 .q-timer {
   display:flex; align-items:center; gap:.6rem;
-  margin-bottom:.6rem;
+  margin-bottom:.75rem;
 }
 .q-timer-bar-wrap {
-  flex:1; height:6px; background:rgba(255,255,255,.08);
-  border-radius:3px; overflow:hidden;
+  flex:1; height:8px; background:rgba(255,255,255,.1);
+  border-radius:4px; overflow:hidden;
 }
 .q-timer-bar {
   height:100%; border-radius:3px;
   background:linear-gradient(90deg,var(--green),var(--goldl));
-  transition:width .9s linear, background-color .5s;
+  transition:width .3s linear, background .5s;
 }
 .q-timer-bar.warn { background:linear-gradient(90deg,var(--red),#ff8c42); }
 .q-timer-num {
@@ -880,9 +880,8 @@ function handleMsg(msg){
 
     // ── SOAL SIAP ──
     case 'question_ready':
-      if(fromSelf) break; // host sudah showQuestion() di generateQuestion callback
       currentQuestion=d.q;
-      showQuestion(d.q, gs.turn===myIndex);
+      if(!fromSelf) showQuestion(d.q, gs.turn===myIndex);
       break;
 
     // ── JAWABAN DIKIRIM ──
@@ -1003,13 +1002,13 @@ function renderDiffPicker(){
 
 function chooseDiff(diff){
   if(isHost){
-    // Host pilih diff → generate langsung, broadcast question_ready ke player2
+    // Host generate soal → broadcast ke player2
     generateQuestion(diff, pendingAction, function(q){
       currentQuestion=q;
       publishMsg('question_ready',{q:q});
+      // Host tampilkan soal: bisa jawab jika giliran host, observer jika giliran player2
       showQuestion(q, gs.turn===myIndex);
     });
-    // Juga publish diff_chosen supaya player2 tau kita lagi generate
     publishMsg('diff_chosen',{diff:diff});
   } else {
     // Player2 pilih diff → publish ke host, tunggu question_ready
@@ -1190,22 +1189,20 @@ var _qTimer=null, _qTimerSec=0, _qTimerMax=0;
 function startQuestionTimer(seconds, onExpire){
   clearQuestionTimer();
   _qTimerMax=seconds; _qTimerSec=seconds;
-  updateTimerUI(seconds,seconds);
+  // Force first render immediately
+  updateTimerUI(seconds, seconds);
   _qTimer=setInterval(function(){
     _qTimerSec--;
-    updateTimerUI(_qTimerSec,_qTimerMax);
+    updateTimerUI(_qTimerSec, _qTimerMax);
     if(_qTimerSec<=0){
       clearQuestionTimer();
       onExpire();
     }
-  },1000);
+  }, 1000);
 }
 
 function clearQuestionTimer(){
   if(_qTimer){clearInterval(_qTimer);_qTimer=null;}
-  var bar=document.getElementById('q-timer-bar');
-  var num=document.getElementById('q-timer-num');
-  if(bar) bar.closest('.q-timer') && (bar.closest('.q-timer').style.display='none');
 }
 
 function updateTimerUI(sec, max){
@@ -1244,32 +1241,30 @@ function showQuestion(q,canAnswer){
       <span class="diff-badge ${q.diff}">${dname[q.diff]||q.diff}</span>
       <div class="q-txt">${q.q}</div>
     </div>
-    <div class="choices">${shuffled.map((c,i)=>`
-        <button class="ch${canAnswer?'':' observer-ch'}" ${canAnswer?`onclick="submitAnswer(this,'${c.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"`:'disabled'}>
-          <span class="ch-letter">${letters[i]}</span>${c}
-        </button>`).join('')}
-    </div>
     ${canAnswer
-      ?`<div style="text-align:center;margin-top:.7rem;color:var(--muted);font-size:.75rem;font-weight:700">
+      ?`<div class="choices">${shuffled.map((c,i)=>`
+          <button class="ch" onclick="submitAnswer(this,'${c.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+            <span class="ch-letter">${letters[i]}</span>${c}
+          </button>`).join('')}
+        </div>
+        <div style="text-align:center;margin-top:.7rem;color:var(--muted);font-size:.75rem;font-weight:700">
           Jawab benar → ${ACTIONS[q.action]?.icon} ${ACTIONS[q.action]?.val?.[q.diff]||'?'} efek!
         </div>`
-      :`<div style="text-align:center;margin-top:.5rem;color:var(--muted);font-size:.78rem">✏️ Menunggu lawan menjawab...</div>`
+      :`<div class="wait-box" style="padding:.8rem 0"><span style="font-size:1.3rem">✏️</span> <span style="color:var(--muted);font-size:.85rem">Lawan sedang menjawab...</span></div>`
     }`;
 
-  // Use requestAnimationFrame to ensure DOM is painted before starting timer
+  // Wait one frame for DOM to paint, then start timer
   requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      if(canAnswer){
-        startQuestionTimer(dur, function(){
-          document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
-          toast('⏰ Waktu habis! Giliran dilewati.');
-          publishMsg('answer_submit',{answer:'__timeout__', playerIndex:myIndex});
-          if(isHost) processAnswer('__timeout__', myIndex);
-        });
-      } else {
-        startQuestionTimer(dur, function(){});
-      }
-    });
+    if(canAnswer){
+      startQuestionTimer(dur, function(){
+        document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
+        toast('⏰ Waktu habis! Giliran dilewati.');
+        publishMsg('answer_submit',{answer:'__timeout__', playerIndex:myIndex});
+        if(isHost) processAnswer('__timeout__', myIndex);
+      });
+    } else {
+      startQuestionTimer(dur, function(){});
+    }
   });
 }
 
