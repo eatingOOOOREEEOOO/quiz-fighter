@@ -523,6 +523,17 @@ body::before {
 .q-txt { font-size:1rem; font-weight:400; line-height:1.55; color:var(--text); }
 
 
+.observer-wait {
+  display:flex; flex-direction:column; align-items:center;
+  padding:1.5rem .5rem; gap:.75rem; text-align:center;
+}
+.observer-wait-icon { font-size:2.4rem; line-height:1; }
+.observer-wait-name {
+  font-size:1rem; color:var(--muted); font-weight:400; line-height:1.4;
+}
+.observer-wait-name strong { color:var(--goldl); font-weight:700; }
+.observer-timer-wrap { width:100%; margin-top:.25rem; }
+
 .ch.observer-ch { opacity:.55; cursor:default; }
 .ch.observer-ch:hover { transform:none !important; border-color:var(--border) !important; background:var(--ink2) !important; }
 
@@ -1225,36 +1236,54 @@ function timerDuration(diff){
 // ══════════════════════════════════════
 // SHOW QUESTION
 // ══════════════════════════════════════
-function showQuestion(q,canAnswer){
+function showQuestion(q, canAnswer){
   const letters=['A','B','C','D'];
   const dname={easy:'Mudah',medium:'Sedang',hard:'Sulit'};
   const dur=timerDuration(q.diff);
-  // Shuffle choices but keep track of correct answer
-  const shuffled = shuffleChoices(q.choices);
-  $('g-ptitle').textContent=ACTIONS[q.action]?.icon+' Jawab Pertanyaan!';
-  $('g-pcontent').innerHTML=`
-    <div class="q-timer" id="q-timer-wrap">
-      <div class="q-timer-bar-wrap"><div class="q-timer-bar" id="q-timer-bar" style="width:100%"></div></div>
-      <div class="q-timer-num" id="q-timer-num">${dur}</div>
-    </div>
-    <div class="q-box">
-      <span class="diff-badge ${q.diff}">${dname[q.diff]||q.diff}</span>
-      <div class="q-txt">${q.q}</div>
-    </div>
-    ${canAnswer
-      ?`<div class="choices">${shuffled.map((c,i)=>`
-          <button class="ch" onclick="submitAnswer(this,'${c.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
-            <span class="ch-letter">${letters[i]}</span>${c}
-          </button>`).join('')}
-        </div>
-        <div style="text-align:center;margin-top:.7rem;color:var(--muted);font-size:.75rem;font-weight:700">
-          Jawab benar → ${ACTIONS[q.action]?.icon} ${ACTIONS[q.action]?.val?.[q.diff]||'?'} efek!
-        </div>`
-      :`<div class="wait-box" style="padding:.8rem 0"><span style="font-size:1.3rem">✏️</span> <span style="color:var(--muted);font-size:.85rem">Lawan sedang menjawab...</span></div>`
-    }`;
+  const shuffled=shuffleChoices(q.choices);
 
-  // Wait one frame for DOM to paint, then start timer
-  requestAnimationFrame(function(){
+  // Nama player yang sedang menjawab
+  const answeringPlayer = gs.players[gs.turn];
+  const answeringName = answeringPlayer ? answeringPlayer.name : 'Lawan';
+
+  $('g-ptitle').textContent=ACTIONS[q.action]?.icon+' Jawab Pertanyaan!';
+
+  if(canAnswer){
+    // Player yang giliran: tampilkan soal + pilihan
+    $('g-pcontent').innerHTML=`
+      <div class="q-timer" id="q-timer-wrap">
+        <div class="q-timer-bar-wrap"><div class="q-timer-bar" id="q-timer-bar" style="width:100%"></div></div>
+        <div class="q-timer-num" id="q-timer-num">${dur}</div>
+      </div>
+      <div class="q-box">
+        <span class="diff-badge ${q.diff}">${dname[q.diff]||q.diff}</span>
+        <div class="q-txt">${q.q}</div>
+      </div>
+      <div class="choices">${shuffled.map((c,i)=>`
+        <button class="ch" onclick="submitAnswer(this,'${c.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+          <span class="ch-letter">${letters[i]}</span>${c}
+        </button>`).join('')}
+      </div>
+      <div style="text-align:center;margin-top:.7rem;color:var(--muted);font-size:.75rem;font-weight:700">
+        Jawab benar → ${ACTIONS[q.action]?.icon} ${ACTIONS[q.action]?.val?.[q.diff]||'?'} efek!
+      </div>`;
+  } else {
+    // Observer: hanya tampilkan waiting message, TANPA soal
+    $('g-pcontent').innerHTML=`
+      <div class="observer-wait">
+        <div class="observer-wait-icon">✏️</div>
+        <div class="observer-wait-name">Menunggu <strong>${answeringName}</strong> Menjawab...</div>
+        <div class="observer-timer-wrap">
+          <div class="q-timer" id="q-timer-wrap" style="max-width:280px;margin:0 auto">
+            <div class="q-timer-bar-wrap"><div class="q-timer-bar" id="q-timer-bar" style="width:100%"></div></div>
+            <div class="q-timer-num" id="q-timer-num">${dur}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // setTimeout 50ms — reliable across all browsers/devices for DOM paint
+  setTimeout(function(){
     if(canAnswer){
       startQuestionTimer(dur, function(){
         document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
@@ -1265,7 +1294,7 @@ function showQuestion(q,canAnswer){
     } else {
       startQuestionTimer(dur, function(){});
     }
-  });
+  }, 50);
 }
 
 function submitAnswer(btn,answer){
