@@ -223,16 +223,16 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 
   <!-- Step 3: Waiting -->
   <div class="card" id="step-wait" style="display:none">
-    <div class="card-title" style="text-align:center">⏳ Menunggu Lawan...</div>
+    <div class="card-title" style="text-align:center" id="wait-title">⏳ Menunggu Lawan...</div>
     <div class="room-code-box">
       <div class="room-code-big" id="disp-code">----</div>
-      <div class="room-code-hint">Bagikan kode 4 huruf ini ke temanmu</div>
+      <div class="room-code-hint" id="wait-hint">Bagikan kode 4 huruf ini ke temanmu</div>
     </div>
     <div style="text-align:center;padding:.5rem">
       <div class="dots"><span></span><span></span><span></span></div>
-      <div style="color:var(--muted);font-size:.85rem;font-weight:700;margin-top:.6rem">Menunggu player ke-2 bergabung...</div>
+      <div id="wait-msg" style="color:var(--muted);font-size:.85rem;font-weight:700;margin-top:.6rem">Menunggu player ke-2 bergabung...</div>
     </div>
-    <button class="btn btn-ghost" onclick="copyCode()">📋 Salin Kode</button>
+    <button class="btn btn-ghost" id="wait-copy-btn" onclick="copyCode()">📋 Salin Kode</button>
     <button class="btn btn-ghost" onclick="leaveRoom()">✕ Keluar Room</button>
   </div>
 </div>
@@ -359,12 +359,19 @@ function doJoinRoom(btn){
     btn.disabled=false; btn.innerHTML='🚪 JOIN ROOM';
     roomCode=code; isHost=false; myIndex=1;
     subRoom(function(){
+      // Tampilkan waiting screen sambil tunggu host reply game_init
+      $('disp-code').textContent=code;
+      showStep('wait');
+      // Sesuaikan teks untuk player 2
+      var wt=$('wait-title'); if(wt) wt.textContent='✅ Berhasil Bergabung!';
+      var wh=$('wait-hint');  if(wh) wh.textContent='Kode room: '+code;
+      var wm=$('wait-msg');   if(wm) wm.textContent='Menunggu host memulai game...';
+      var wb=$('wait-copy-btn'); if(wb) wb.style.display='none';
       publishMsg('player_join',{
         id:myId,
         name:localStorage.getItem('qf_name')||$('inp-name').value.trim(),
         av:selectedAv, index:1
       });
-      toast('✅ Bergabung ke room '+code+'...');
     });
   }, function(){
     btn.disabled=false; btn.innerHTML='🚪 JOIN ROOM';
