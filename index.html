@@ -523,6 +523,9 @@ body::before {
 .q-txt { font-size:1rem; font-weight:400; line-height:1.55; color:var(--text); }
 
 
+.ch.observer-ch { opacity:.55; cursor:default; }
+.ch.observer-ch:hover { transform:none !important; border-color:var(--border) !important; background:var(--ink2) !important; }
+
 #toast {
   position:fixed; top:1rem; left:50%; transform:translateX(-50%);
   background:var(--ink3); border:1px solid var(--border2);
@@ -1050,6 +1053,26 @@ function getFallback(diff){
       {q:'Apa nama ibukota Perancis?',answer:'paris',choices:['London','Berlin','Paris','Roma']},
       {q:'Siapa yang menemukan Amerika?',answer:'columbus',choices:['Magellan','Columbus','Vespucci','Drake']},
       {q:'Berapa bulan dalam setahun?',answer:'12',choices:['10','11','12','13']},
+      {q:'Apa warna langit pada siang hari?',answer:'biru',choices:['Hijau','Kuning','Biru','Putih']},
+      {q:'Berapa hasil 15 + 27?',answer:'42',choices:['38','40','42','44']},
+      {q:'Hewan apa yang menghasilkan madu?',answer:'lebah',choices:['Semut','Lebah','Kupu-kupu','Lalat']},
+      {q:'Apa ibukota Korea Selatan?',answer:'seoul',choices:['Seoul','Busan','Tokyo','Beijing']},
+      {q:'Berapa jumlah hari dalam seminggu?',answer:'7',choices:['5','6','7','8']},
+      {q:'Apa nama satelit alami Bumi?',answer:'bulan',choices:['Mars','Venus','Bulan','Pluto']},
+      {q:'Berapa hasil 9 × 9?',answer:'81',choices:['72','81','84','90']},
+      {q:'Negara mana yang terkenal dengan menara Eiffel?',answer:'prancis',choices:['Italia','Prancis','Spanyol','Belanda']},
+      {q:'Apa ibukota Inggris?',answer:'london',choices:['Paris','Berlin','London','Madrid']},
+      {q:'Berapa sisi lingkaran?',answer:'0',choices:['0','1','2','3']},
+      {q:'Apa nama cairan yang keluar dari pohon karet?',answer:'lateks',choices:['Resin','Getah','Lateks','Sap']},
+      {q:'Apa warna daun yang sehat umumnya?',answer:'hijau',choices:['Kuning','Hijau','Merah','Coklat']},
+      {q:'Hewan apa yang bisa mengubah warnanya?',answer:'bunglon',choices:['Kadal','Bunglon','Iguana','Tokek']},
+      {q:'Berapa jumlah jari tangan manusia?',answer:'10',choices:['8','9','10','12']},
+      {q:'Apa nama proses memasak nasi dengan air panas?',answer:'merebus',choices:['Menggoreng','Merebus','Memanggang','Mengukus']},
+      {q:'Ibukota negara Mesir?',answer:'kairo',choices:['Kairo','Tunis','Rabat','Tripoli']},
+      {q:'Berapa hasil 50 - 18?',answer:'32',choices:['28','30','32','34']},
+      {q:'Apa nama alat untuk mengukur suhu tubuh?',answer:'termometer',choices:['Barometer','Termometer','Higrometer','Anemometer']},
+      {q:'Apa ibukota Thailand?',answer:'bangkok',choices:['Bangkok','Hanoi','Manila','Jakarta']},
+      {q:'Olahraga apa yang dimainkan di kolam renang?',answer:'renang',choices:['Polo air','Renang','Selam','Semua benar']},
     ],
     medium:[
       {q:'Siapa penemu bola lampu?',answer:'thomas edison',choices:['Nikola Tesla','Thomas Edison','Einstein','Newton']},
@@ -1072,6 +1095,26 @@ function getFallback(diff){
       {q:'Siapa penemu gravitasi?',answer:'isaac newton',choices:['Einstein','Newton','Galileo','Copernicus']},
       {q:'Gunung berapi paling aktif di Indonesia?',answer:'merapi',choices:['Bromo','Rinjani','Merapi','Semeru']},
       {q:'Apa nama planet merah?',answer:'mars',choices:['Venus','Mars','Jupiter','Saturnus']},
+      {q:'Berapa jumlah benua di dunia?',answer:'7',choices:['5','6','7','8']},
+      {q:'Apa nama bahan bakar utama roket?',answer:'hidrogen cair',choices:['Bensin','Solar','Hidrogen Cair','LPG']},
+      {q:'Siapa pengarang novel Harry Potter?',answer:'j.k. rowling',choices:['Tolkien','J.K. Rowling','C.S. Lewis','Roald Dahl']},
+      {q:'Unsur kimia dengan lambang Fe?',answer:'besi',choices:['Emas','Perak','Besi','Tembaga']},
+      {q:'Apa nama ibukota Kanada?',answer:'ottawa',choices:['Toronto','Vancouver','Ottawa','Montreal']},
+      {q:'Berapa jumlah gigi manusia dewasa?',answer:'32',choices:['28','30','32','34']},
+      {q:'Siapa presiden Amerika pertama?',answer:'george washington',choices:['Abraham Lincoln','George Washington','Thomas Jefferson','John Adams']},
+      {q:'Apa nama proses pembekuan darah?',answer:'koagulasi',choices:['Oksidasi','Koagulasi','Hidrolisis','Fermentasi']},
+      {q:'Planet terdekat dengan Matahari?',answer:'merkurius',choices:['Venus','Bumi','Merkurius','Mars']},
+      {q:'Apa nama mata uang negara China?',answer:'yuan',choices:['Yen','Won','Yuan','Baht']},
+      {q:'Berapa jumlah kamar pada jantung manusia?',answer:'4',choices:['2','3','4','5']},
+      {q:'Siapa penemu mesin uap?',answer:'james watt',choices:['James Watt','George Stephenson','Thomas Edison','Nikola Tesla']},
+      {q:'Apa nama lapisan terluar Bumi?',answer:'kerak',choices:['Mantel','Inti','Kerak','Astenosfer']},
+      {q:'Berapa jumlah huruf dalam alfabet Indonesia?',answer:'26',choices:['24','25','26','27']},
+      {q:'Siapa pencipta teori evolusi?',answer:'charles darwin',choices:['Gregor Mendel','Charles Darwin','Louis Pasteur','Carl Linnaeus']},
+      {q:'Apa nama ibukota Brazil?',answer:'brasilia',choices:['Rio de Janeiro','São Paulo','Brasilia','Buenos Aires']},
+      {q:'Berapa banyak warna dalam bendera Olimpiade?',answer:'5',choices:['4','5','6','7']},
+      {q:'Mata uang negara India?',answer:'rupee',choices:['Rupiah','Rupee','Ringgit','Baht']},
+      {q:'Apa nama pulau terbesar di dunia?',answer:'greenland',choices:['Borneo','Greenland','Papua','Madagaskar']},
+      {q:'Berapa jam dalam sehari?',answer:'24',choices:['20','22','24','26']},
     ],
     hard:[
       {q:'Simbol kimia untuk Emas?',answer:'au',choices:['Ag','Au','Fe','Cu']},
@@ -1094,6 +1137,26 @@ function getFallback(diff){
       {q:'Apa nama hukum pertama Newton?',answer:'inersia',choices:['Gravitasi','Inersia','Aksi-Reaksi','Percepatan']},
       {q:'Berapa panjang gelombang cahaya tampak (nm)?',answer:'400-700',choices:['200-400','400-700','700-1000','100-200']},
       {q:'Siapa penemu struktur DNA?',answer:'watson dan crick',choices:['Mendel','Watson dan Crick','Darwin','Pasteur']},
+      {q:'Apa nama senyawa kimia air?',answer:'h2o',choices:['H2O','CO2','NaCl','O2']},
+      {q:'Berapa nilai Pi (π) hingga 2 desimal?',answer:'3.14',choices:['3.12','3.14','3.16','3.18']},
+      {q:'Apa nama hukum termodinamika yang pertama?',answer:'kekekalan energi',choices:['Kekekalan Energi','Entropi','Hukum Boyle','Hukum Gay-Lussac']},
+      {q:'Siapa yang mengembangkan kalkulus?',answer:'newton dan leibniz',choices:['Newton dan Leibniz','Euler','Gauss','Lagrange']},
+      {q:'Unsur dengan nomor atom 79?',answer:'emas',choices:['Perak','Emas','Platinum','Tembaga']},
+      {q:'Apa nama tulang terpanjang di tubuh manusia?',answer:'femur',choices:['Tibia','Fibula','Femur','Humerus']},
+      {q:'Berapa jumlah elektron dalam atom Oksigen?',answer:'8',choices:['6','7','8','10']},
+      {q:'Siapa filsuf Yunani penulis "Republik"?',answer:'plato',choices:['Aristoteles','Sokrates','Plato','Thales']},
+      {q:'Apa nama lapisan atmosfer tempat pesawat terbang?',answer:'troposfer',choices:['Stratosfer','Troposfer','Mesosfer','Ionosfer']},
+      {q:'Berapa banyak pasang kromosom manusia?',answer:'23',choices:['21','22','23','24']},
+      {q:'Apa nama reaksi yang menghasilkan energi pada Matahari?',answer:'fusi nuklir',choices:['Fisi Nuklir','Fusi Nuklir','Pembakaran','Oksidasi']},
+      {q:'Siapa penemu vaksin cacar?',answer:'edward jenner',choices:['Louis Pasteur','Edward Jenner','Alexander Fleming','Robert Koch']},
+      {q:'Apa nama teori tentang asal usul alam semesta?',answer:'big bang',choices:['Steady State','Big Bang','Inflasi','Osilasi']},
+      {q:'Berapa jumlah proton pada atom Emas (Au)?',answer:'79',choices:['47','78','79','80']},
+      {q:'Siapa yang merumuskan persamaan E=mc²?',answer:'einstein',choices:['Newton','Bohr','Einstein','Planck']},
+      {q:'Apa nama enzim yang memecah protein?',answer:'protease',choices:['Amilase','Lipase','Protease','Laktase']},
+      {q:'Apa lambang kimia untuk Natrium?',answer:'na',choices:['Na','Ni','Ne','No']},
+      {q:'Siapa penulis "On the Origin of Species"?',answer:'charles darwin',choices:['Gregor Mendel','Charles Darwin','Alfred Wallace','Thomas Huxley']},
+      {q:'Berapa kecepatan suara di udara (m/s) pada 20°C?',answer:'343',choices:['300','343','400','440']},
+      {q:'Apa nama proses pemisahan campuran berdasarkan titik didih?',answer:'distilasi',choices:['Filtrasi','Kromatografi','Distilasi','Evaporasi']},
     ]
   };
   var arr=pool[diff]||pool.easy;
@@ -1104,7 +1167,19 @@ function getFallback(diff){
   var picked=avail[idx];
   var realIdx=arr.indexOf(picked);
   _usedQ[diff].push(realIdx);
-  return Object.assign({},picked);
+  var result=Object.assign({},picked);
+  // Choices will be shuffled in showQuestion() for random order each time
+  return result;
+}
+
+// Shuffle choices array (Fisher-Yates)
+function shuffleChoices(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var t=a[i];a[i]=a[j];a[j]=t;
+  }
+  return a;
 }
 
 // ══════════════════════════════════════
@@ -1157,6 +1232,8 @@ function showQuestion(q,canAnswer){
   const letters=['A','B','C','D'];
   const dname={easy:'Mudah',medium:'Sedang',hard:'Sulit'};
   const dur=timerDuration(q.diff);
+  // Shuffle choices but keep track of correct answer
+  const shuffled = shuffleChoices(q.choices);
   $('g-ptitle').textContent=ACTIONS[q.action]?.icon+' Jawab Pertanyaan!';
   $('g-pcontent').innerHTML=`
     <div class="q-timer" id="q-timer-wrap">
@@ -1167,31 +1244,33 @@ function showQuestion(q,canAnswer){
       <span class="diff-badge ${q.diff}">${dname[q.diff]||q.diff}</span>
       <div class="q-txt">${q.q}</div>
     </div>
+    <div class="choices">${shuffled.map((c,i)=>`
+        <button class="ch${canAnswer?'':' observer-ch'}" ${canAnswer?`onclick="submitAnswer(this,'${c.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"`:'disabled'}>
+          <span class="ch-letter">${letters[i]}</span>${c}
+        </button>`).join('')}
+    </div>
     ${canAnswer
-      ?`<div class="choices">${q.choices.map((c,i)=>`
-          <button class="ch" onclick="submitAnswer(this,'${c.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
-            <span class="ch-letter">${letters[i]}</span>${c}
-          </button>`).join('')}
-        </div>
-        <div style="text-align:center;margin-top:.7rem;color:var(--muted);font-size:.75rem;font-weight:700">
+      ?`<div style="text-align:center;margin-top:.7rem;color:var(--muted);font-size:.75rem;font-weight:700">
           Jawab benar → ${ACTIONS[q.action]?.icon} ${ACTIONS[q.action]?.val?.[q.diff]||'?'} efek!
         </div>`
-      :`<div class="wait-box"><span class="big">✏️</span>Menunggu lawan menjawab...</div>`
+      :`<div style="text-align:center;margin-top:.5rem;color:var(--muted);font-size:.78rem">✏️ Menunggu lawan menjawab...</div>`
     }`;
 
-  if(canAnswer){
-    startQuestionTimer(dur, function(){
-      // Time's up — disable choices and auto-skip as wrong answer
-      document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
-      toast('⏰ Waktu habis! Giliran dilewati.');
-      // Publish timeout as wrong answer
-      publishMsg('answer_submit',{answer:'__timeout__', playerIndex:myIndex});
-      if(isHost) processAnswer('__timeout__', myIndex);
+  // Use requestAnimationFrame to ensure DOM is painted before starting timer
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      if(canAnswer){
+        startQuestionTimer(dur, function(){
+          document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
+          toast('⏰ Waktu habis! Giliran dilewati.');
+          publishMsg('answer_submit',{answer:'__timeout__', playerIndex:myIndex});
+          if(isHost) processAnswer('__timeout__', myIndex);
+        });
+      } else {
+        startQuestionTimer(dur, function(){});
+      }
     });
-  } else {
-    // Show timer for observer too (cosmetic only)
-    startQuestionTimer(dur, function(){});
-  }
+  });
 }
 
 function submitAnswer(btn,answer){
