@@ -437,6 +437,8 @@ function handleMsg(msg){
   const fromSelf=d._from===myId;
 
   switch(msg.name){
+
+    // ── HOST ONLY: player ke-2 bergabung ──
     case 'player_join':
       if(!isHost) break;
       gs={
@@ -447,53 +449,79 @@ function handleMsg(msg){
         turn:0,round:1,phase:'choose_action',hostId:myId
       };
       publishMsg('game_init',{gs});
+      // Host sudah startGame() di player_join, tidak perlu tunggu game_init balik
       startGame();
       break;
 
+    // ── PLAYER 2 ONLY: terima init dari host ──
     case 'game_init':
+      if(fromSelf) break; // host skip, sudah startGame di player_join
       gs=d.gs; startGame(); break;
 
+    // ── SYNC STATE (host → player2) ──
     case 'state_sync':
-      if(fromSelf) break; // host yang kirim, tidak perlu proses balik
+      if(fromSelf) break;
       gs=d.gs; renderFighters(); break;
 
+    // ── AKSI DIPILIH ──
     case 'action_chosen':
-      if(fromSelf){ pendingAction=d.action; break; } // host simpan pendingAction-nya sendiri
+      if(fromSelf) break; // yang pilih aksi sudah set pendingAction di chooseAction()
       pendingAction=d.action;
+      // Kalau giliran kita (tapi kita bukan yang pilih aksi = impossible, tapi jaga-jaga)
       if(myIndex===gs.turn){
         $('g-ptitle').textContent='📊 Pilih Tingkat Kesulitan:';
         renderDiffPicker();
       } else {
-        var aName = ACTIONS[d.action] ? ACTIONS[d.action].icon+' Lawan memilih kesulitan...' : 'Lawan memilih kesulitan...';
-        setWaiting(aName);
+        var icon = ACTIONS[d.action] ? ACTIONS[d.action].icon : '';
+        setWaiting(icon+' Lawan memilih kesulitan...');
       }
       break;
 
+    // ── KESULITAN DIPILIH ──
     case 'diff_chosen':
       if(fromSelf) break;
-      // Non-host: tunggu soal dari host via question_ready
-      setWaiting('⚡ Menyiapkan soal...');
+      // Kalau penerima adalah host → generate soal
+      if(isHost){
+        generateQuestion(d.diff, pendingAction, function(q){
+          currentQuestion=q;
+          publishMsg('question_ready',{q:q});
+          showQuestion(q, gs.turn===myIndex);
+        });
+      } else {
+        // Player 2 yang pilih diff, host akan generate, kita tunggu question_ready
+        setWaiting('⚡ Menyiapkan soal...');
+      }
       break;
 
+    // ── SOAL SIAP ──
     case 'question_ready':
-      if(fromSelf) break;
+      if(fromSelf) break; // host sudah showQuestion() di generateQuestion callback
       currentQuestion=d.q;
-      showQuestion(d.q,gs.turn===myIndex);
+      showQuestion(d.q, gs.turn===myIndex);
       break;
 
+    // ── JAWABAN DIKIRIM ──
     case 'answer_submit':
-      if(fromSelf) break; // host sudah proses di submitAnswer()
+      if(fromSelf) break; // host sudah processAnswer() di submitAnswer()
       if(isHost) processAnswer(d.answer, d.playerIndex);
       break;
 
+    // ── HASIL AKSI ──
     case 'action_result':
-      // Semua player (termasuk host) render hasil
+      // Kedua player render hasil (host broadcast, kedua terima)
       gs=d.gs; renderFighters(); showResult(d);
-      if(d.gameOver) setTimeout(function(){ showGameOver(d.winner); },2200);
-      else setTimeout(function(){ gs.phase='choose_action'; syncState(); renderTurnPhase(); },3000);
+      if(d.gameOver){
+        setTimeout(function(){ showGameOver(d.winner); }, 2200);
+      } else {
+        setTimeout(function(){
+          gs.phase='choose_action'; syncState(); renderTurnPhase();
+        }, 3000);
+      }
       break;
 
+    // ── REMATCH ──
     case 'rematch_go':
+      if(fromSelf) break; // host sudah startGame() di voteRematch()
       gs=d.gs; startGame(); break;
 
     case 'player_left':
@@ -587,15 +615,18 @@ function renderDiffPicker(){
 }
 
 function chooseDiff(diff){
-  publishMsg('diff_chosen',{diff});
-  // Host langsung generate soal — tidak perlu tunggu event balik ke diri sendiri
   if(isHost){
+    // Host pilih diff → generate langsung, broadcast question_ready ke player2
     generateQuestion(diff, pendingAction, function(q){
-      currentQuestion = q;
-      publishMsg('question_ready', {q:q});
+      currentQuestion=q;
+      publishMsg('question_ready',{q:q});
       showQuestion(q, gs.turn===myIndex);
     });
+    // Juga publish diff_chosen supaya player2 tau kita lagi generate
+    publishMsg('diff_chosen',{diff:diff});
   } else {
+    // Player2 pilih diff → publish ke host, tunggu question_ready
+    publishMsg('diff_chosen',{diff:diff});
     setWaiting('⚡ Menyiapkan soal...');
     $('g-ptitle').textContent='⚡ Menyiapkan soal...';
   }
