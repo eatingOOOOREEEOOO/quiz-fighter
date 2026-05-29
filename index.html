@@ -451,11 +451,10 @@ function handleMsg(msg){
       break;
 
     case 'game_init':
-      if(fromSelf) break;
       gs=d.gs; startGame(); break;
 
     case 'state_sync':
-      if(fromSelf) break;
+      if(fromSelf) break; // host yang kirim, tidak perlu proses balik
       gs=d.gs; renderFighters(); break;
 
     case 'action_chosen':
@@ -483,19 +482,18 @@ function handleMsg(msg){
       break;
 
     case 'answer_submit':
-      if(fromSelf) break;
-      if(isHost) processAnswer(d.answer,d.playerIndex);
+      if(fromSelf) break; // host sudah proses di submitAnswer()
+      if(isHost) processAnswer(d.answer, d.playerIndex);
       break;
 
     case 'action_result':
-      if(fromSelf) break;
+      // Semua player (termasuk host) render hasil
       gs=d.gs; renderFighters(); showResult(d);
-      if(d.gameOver) setTimeout(()=>showGameOver(d.winner),2200);
-      else setTimeout(()=>{gs.phase='choose_action';syncState();renderTurnPhase();},3000);
+      if(d.gameOver) setTimeout(function(){ showGameOver(d.winner); },2200);
+      else setTimeout(function(){ gs.phase='choose_action'; syncState(); renderTurnPhase(); },3000);
       break;
 
     case 'rematch_go':
-      if(fromSelf) break;
       gs=d.gs; startGame(); break;
 
     case 'player_left':
@@ -722,7 +720,10 @@ function showQuestion(q,canAnswer){
 function submitAnswer(btn,answer){
   document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
   btn.style.borderColor='var(--gold)';
-  publishMsg('answer_submit',{answer:answer.toLowerCase().trim(),playerIndex:myIndex});
+  var ans = answer.toLowerCase().trim();
+  publishMsg('answer_submit',{answer:ans, playerIndex:myIndex});
+  // Host langsung proses jawabannya sendiri
+  if(isHost) processAnswer(ans, myIndex);
 }
 
 // ══════════════════════════════════════
@@ -844,9 +845,10 @@ function showGameOver(winner){
 
 function voteRematch(){
   if(isHost){
-    gs.players.forEach(p=>{p.hp=MAX_HP;p.shield=0;});
-    gs.turn=0;gs.round=1;gs.phase='choose_action';
+    gs.players.forEach(function(p){p.hp=MAX_HP;p.shield=0;});
+    gs.turn=0; gs.round=1; gs.phase='choose_action';
     publishMsg('rematch_go',{gs});
+    // Host langsung mulai tanpa tunggu event balik
     startGame();
   } else {
     publishMsg('rematch_req',{});
