@@ -326,9 +326,11 @@ function pickAv(btn){
 // LOBBY
 // ══════════════════════════════════════
 function getNameOrWarn(){
-  const name=$('inp-name').value.trim();
+  var name=$('inp-name').value.trim();
   if(!name){toast('Masukkan username dulu!');return null;}
   localStorage.setItem('qf_name',name);
+  // Simpan avatar yang dipilih juga
+  localStorage.setItem('qf_av',selectedAv);
   return name;
 }
 
@@ -367,10 +369,10 @@ function doJoinRoom(btn){
       var wh=$('wait-hint');  if(wh) wh.textContent='Kode room: '+code;
       var wm=$('wait-msg');   if(wm) wm.textContent='Menunggu host memulai game...';
       var wb=$('wait-copy-btn'); if(wb) wb.style.display='none';
+      var p2name = localStorage.getItem('qf_name') || $('inp-name').value.trim();
+      var p2av   = localStorage.getItem('qf_av')   || selectedAv;
       publishMsg('player_join',{
-        id:myId,
-        name:localStorage.getItem('qf_name')||$('inp-name').value.trim(),
-        av:selectedAv, index:1
+        id:myId, name:p2name, av:p2av, index:1
       });
     });
   }, function(){
@@ -448,21 +450,20 @@ function handleMsg(msg){
     // ── HOST ONLY: player ke-2 bergabung ──
     case 'player_join':
       if(!isHost) break;
+      var hostName = localStorage.getItem('qf_name') || 'Player 1';
+      var hostAv   = localStorage.getItem('qf_av')   || selectedAv;
       gs={
         players:[
-          {id:myId,name:localStorage.getItem('qf_name'),av:selectedAv,hp:MAX_HP,maxHp:MAX_HP,shield:0},
-          {id:d.id,name:d.name,av:d.av,hp:MAX_HP,maxHp:MAX_HP,shield:0}
+          {id:myId, name:hostName, av:hostAv, hp:MAX_HP, maxHp:MAX_HP, shield:0},
+          {id:d.id, name:d.name,  av:d.av,   hp:MAX_HP, maxHp:MAX_HP, shield:0}
         ],
-        turn:0,round:1,phase:'choose_action',hostId:myId
+        turn:0, round:1, phase:'choose_action', hostId:myId
       };
       publishMsg('game_init',{gs});
-      // Host sudah startGame() di player_join, tidak perlu tunggu game_init balik
-      startGame();
       break;
 
-    // ── PLAYER 2 ONLY: terima init dari host ──
+    // ── SEMUA PLAYER: terima game_init → startGame ──
     case 'game_init':
-      if(fromSelf) break; // host skip, sudah startGame di player_join
       gs=d.gs; startGame(); break;
 
     // ── SYNC STATE (host → player2) ──
@@ -528,7 +529,6 @@ function handleMsg(msg){
 
     // ── REMATCH ──
     case 'rematch_go':
-      if(fromSelf) break; // host sudah startGame() di voteRematch()
       gs=d.gs; startGame(); break;
 
     case 'player_left':
@@ -885,9 +885,8 @@ function voteRematch(){
   if(isHost){
     gs.players.forEach(function(p){p.hp=MAX_HP;p.shield=0;});
     gs.turn=0; gs.round=1; gs.phase='choose_action';
+    // Publish ke semua — host dan player2 sama-sama startGame via rematch_go event
     publishMsg('rematch_go',{gs});
-    // Host langsung mulai tanpa tunggu event balik
-    startGame();
   } else {
     publishMsg('rematch_req',{});
     $('go-rematch-msg').textContent='Menunggu host memulai ulang...';
